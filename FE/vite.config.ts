@@ -22,7 +22,6 @@ export default defineConfig({
       "@Components": path.resolve(rootDir, "./src/components"),
       "@Hooks": path.resolve(rootDir, "./src/hooks"),
       "@Styles": path.resolve(rootDir, "./src/styles"),
-      "@Assets": path.resolve(rootDir, "./src/assets"),
     },
   },
 });

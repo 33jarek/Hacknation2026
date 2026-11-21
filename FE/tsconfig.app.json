@@ -19,8 +19,7 @@
       "@/*": ["./src/*"],
       "@Components/*": ["./src/components/*"],
       "@Hooks/*": ["./src/hooks/*"],
-      "@Styles/*": ["./src/styles/*"],
-      "@Assets/*": ["./src/assets/*"]
+      "@Styles/*": ["./src/styles/*"]
     },
 
     /* Linting */

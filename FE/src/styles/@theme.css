@@ -1,0 +1,16 @@
+@theme {
+  --color-kowr-green: #3a7c3e;
+  --color-kowr-light-green: #6cad46;
+  --color-kowr-olive: #acc649;
+  --color-kowr-lime: #dadc5a;
+
+  --color-kowr-forest: #1f5b46;
+  --color-kowr-sage: #b7cfa3;
+  --color-kowr-beige: #e8e2c8;
+  --color-kowr-gray: #6f8172;
+
+  --color-kowr-white: #ffffff;
+  --color-kowr-background: #f8f9f4;
+  --color-kowr-border: #e2e8dc;
+  --color-kowr-text: #26352b;
+}
