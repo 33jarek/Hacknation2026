@@ -1,10 +1,10 @@
 export const Header = () => {
   return (
     <header className="w-dvw">
-      <div className="w-full flex flex-col center py-3 bg-green-300">
+      <div className="w-full flex flex-col center py-3 bg-kowr-green">
         <h1 className="text-5xl font-semibold">DroughtPredict</h1>
       </div>
-      <div className="flex center bg-green-200 text-xl gap-6">
+      <div className="flex center bg-kowr-light-green text-xl py-3 gap-6">
         <input
           type="text"
           placeholder="Miejscowość, NR. Identyfikacyjny"
