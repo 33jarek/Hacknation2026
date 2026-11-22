@@ -8,6 +8,9 @@ from datetime import date, timedelta
 from scipy.stats import linregress
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor
+from fastapi.encoders import jsonable_encoder
+import hashlib
+import json
 import time
 import numpy as np
 import pandas as pd
@@ -18,6 +21,7 @@ try:
     from . import rekomendacje
     from .raport import zbuduj_pdf
     from .services.data_sources.weather import get_weather_context
+    from .services.data_sources.http import CACHE_ROOT, _load_cached, write_cached
     from .services.data_sources.parcel import (
         ParcelServiceError,
         geocode_address,
@@ -31,6 +35,7 @@ except ImportError:
     import rekomendacje
     from raport import zbuduj_pdf
     from services.data_sources.weather import get_weather_context
+    from services.data_sources.http import CACHE_ROOT, _load_cached, write_cached
     from services.data_sources.parcel import (
         ParcelServiceError,
         geocode_address,
@@ -72,6 +77,48 @@ class OcenaInput(BaseModel):
     lon: float = Field(ge=14.0, le=25.0)
     data_analizy: date
     uprawa: Optional[str] = None
+
+
+# ==================================================
+# CACHE WYNIKÓW OCENY (BE/.cache/ocena, max 5 rekordów, TTL 4 h)
+# Ten sam mechanizm co BE/.cache/http: plik <sha256>.json, ważność wg mtime.
+# ==================================================
+
+OCENA_CACHE_DIR = CACHE_ROOT / "ocena"
+OCENA_CACHE_MAX = 5
+OCENA_CACHE_TTL_S = 4 * 60 * 60
+
+
+def _plik_cache(dane: "OcenaInput") -> Path:
+    # Zaokrąglenie do 4 miejsc (~11 m), żeby drobne różnice współrzędnych trafiały w ten sam wpis
+    klucz = [round(dane.lat, 4), round(dane.lon, 4), dane.data_analizy.isoformat(), dane.uprawa or None]
+    return OCENA_CACHE_DIR / f"{hashlib.sha256(json.dumps(klucz).encode()).hexdigest()}.json"
+
+
+def _cache_get(plik: Path) -> Optional[dict]:
+    try:
+        tekst = _load_cached(plik, OCENA_CACHE_TTL_S)
+        if tekst is None:
+            plik.unlink(missing_ok=True)   # przeterminowany wpis nie zajmuje miejsca w limicie
+            return None
+        return json.loads(tekst)
+    except (OSError, ValueError):
+        plik.unlink(missing_ok=True)
+        return None
+
+
+def _cache_set(plik: Path, wartosc: dict) -> None:
+    try:
+        write_cached(plik, json.dumps(jsonable_encoder(wartosc)))
+    except (TypeError, ValueError):
+        return   # nieserializowalna odpowiedź – po prostu jej nie cache'ujemy
+    # Limit rekordów: usuń najstarsze pliki ponad OCENA_CACHE_MAX
+    try:
+        pliki = sorted(OCENA_CACHE_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return
+    for stary in pliki[OCENA_CACHE_MAX:]:
+        stary.unlink(missing_ok=True)
 
 
 def _pogoda_dla_ui(lat: float, lon: float, data_analizy: date) -> Optional[dict]:
@@ -161,6 +208,11 @@ def ocena(
                 lon=21.0122,
                 data_analizy=data_analizy or date.today(),
             )
+
+    klucz = _plik_cache(dane)
+    z_cache = _cache_get(klucz)
+    if z_cache is not None:
+        return z_cache
 
     try:
         # Uruchomienie modelu kolegi
@@ -271,7 +323,7 @@ def ocena(
 
         ocena_ai = _ocena_dla_ui(wynik, wykres_czasowy, dane.uprawa, dane.data_analizy)
 
-        return {
+        odpowiedz = {
             "status": "success",
 
             "lokalizacja": {
@@ -290,6 +342,8 @@ def ocena(
             "ocena_ai": ocena_ai,
             "rekomendacje": ocena_ai["recommendations"],
         }
+        _cache_set(klucz, odpowiedz)
+        return odpowiedz
 
     except HTTPException:
         raise

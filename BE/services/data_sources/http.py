@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import ssl
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -15,7 +17,9 @@ DEFAULT_HEADERS = {
     "Accept": "application/json, text/plain, */*",
 }
 
-CACHE_DIR = Path(".cache/http")
+# BE/.cache – niezależnie od katalogu, z którego uruchomiono serwer
+CACHE_ROOT = Path(__file__).resolve().parents[2] / ".cache"
+CACHE_DIR = CACHE_ROOT / "http"
 
 
 def _build_cache_key(method: str, url: str, data: Optional[bytes]) -> Path:
@@ -43,6 +47,23 @@ def _load_stale_cached(path: Path) -> Optional[str]:
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")
+
+
+def write_cached(path: Path, payload: str) -> None:
+    """Atomowy zapis do cache: równoległe zapytanie nigdy nie przeczyta połowy pliku.
+    Błąd zapisu nie przerywa zapytania – cache jest tylko przyspieszeniem."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(payload)
+            os.replace(tmp, path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
+    except OSError:
+        pass
 
 
 def _read_response_text(response, limit: int = 8_000_000) -> str:
@@ -90,7 +111,7 @@ def fetch_text(
             with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
                 payload = _read_response_text(response)
                 if cache_ttl_seconds > 0:
-                    cache_path.write_text(payload, encoding="utf-8")
+                    write_cached(cache_path, payload)
                 return payload
         except urllib.error.HTTPError as exc:
             last_error = exc

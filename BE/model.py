@@ -88,8 +88,11 @@ def _get(url, params, proby=4):
         if r.status_code == 200:
             js = r.json()
             try:
+                # zapis atomowy: równoległe zapytania nie czytają niedokończonego pliku
                 _CACHE_API.mkdir(parents=True, exist_ok=True)
-                plik.write_text(json.dumps(js))
+                tmp = plik.with_suffix(f".{time.monotonic_ns()}.tmp")
+                tmp.write_text(json.dumps(js))
+                tmp.replace(plik)
             except Exception:
                 pass
             return js

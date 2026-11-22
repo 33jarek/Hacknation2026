@@ -48,3 +48,5 @@ pip-wheel-metadata/
 node_modules/
 **/dist/
 **/.vite/
+# Cache wyników analiz (krótkotrwały, 4 h) – nie commitujemy
+BE/.cache/ocena/

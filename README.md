@@ -371,6 +371,8 @@ Kategorie danych satelitarnych i hydrologicznych są pokryte tylko częściowo. 
 
 Cache archiwalnych danych pogodowych nie wygasa, bo dane historyczne się nie zmieniają. Cache ULDK i Nominatim ma ważność 7–30 dni. Usunięcie katalogu `BE/.cache` wymusza pełne pobranie.
 
+Gotowe wyniki analiz (`/api/ocena`, także dla raportu PDF) trafiają do `BE/.cache/ocena`. Trzymanych jest najwyżej **5 rekordów**, każdy ważny **4 godziny**. Rekord to współrzędne (zaokrąglone do ok. 11 m), data analizy i uprawa. Przy przekroczeniu limitu usuwany jest najstarszy wpis. Ten katalog nie jest commitowany.
+
 ---
 
 ## 8. Biblioteki, komponenty, usługi i narzędzia AI
