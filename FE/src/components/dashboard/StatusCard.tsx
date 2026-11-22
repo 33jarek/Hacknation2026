@@ -1,43 +1,66 @@
 import type { OcenaAI } from "@Hooks/useOcenaWilgoci";
+import { Card, Stat } from "./Card";
 
 type Props = { ocena?: OcenaAI };
 
+const kolorTekstu = {
+  green: "text-kowr-green",
+  olive: "text-[#7f8f2a]",
+  red: "text-red-700",
+} as const;
+
+const kolorRyzyka: Record<string, string> = {
+  wysokie: "border-red-700",
+  umiarkowane: "border-[#b5c23a]",
+  niskie: "border-kowr-green",
+  "nadmiar wody": "border-kowr-green",
+};
+
 export const StatusCard = ({ ocena }: Props) => {
-  const status = ocena?.status ?? "Ładowanie oceny modelu";
-  const summary = ocena?.summary ?? "Ocena zostanie uzupełniona po pobraniu danych.";
-  const percentyl = ocena?.percentyl;
-  const zakres = ocena?.zakres ?? "brak przedziału";
-  const percentClass = ocena?.kolor === "green"
-    ? "text-kowr-green"
-    : ocena?.kolor === "olive"
-      ? "text-kowr-olive"
-      : "text-red-700";
+  if (!ocena) {
+    return (
+      <Card>
+        <p className="text-sm text-kowr-gray">
+          Wskaż lokalizację, wybierz datę i kliknij <strong className="text-kowr-text">Analizuj</strong>.
+        </p>
+      </Card>
+    );
+  }
+
+  const s = ocena.sugestia;
+  const kolorStanu = ocena.percentyl < 30 ? kolorTekstu.red : kolorTekstu.green;
+
   return (
-    <section className="grid min-h-52 overflow-hidden rounded-2xl border border-kowr-border bg-kowr-white md:grid-cols-[1fr_220px_260px]">
-      <div className="flex flex-col justify-center p-6 md:p-8">
-        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-kowr-gray">Stan działki</p>
-        <div className="flex items-center gap-3">
-          <div className="flex center size-12 shrink-0 rounded-full bg-kowr-beige text-kowr-forest">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-              <path d="M12 2.8S5.5 10 5.5 15a6.5 6.5 0 0 0 13 0C18.5 10 12 2.8 12 2.8Z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-kowr-text">{status}</h2>
-            <p className="mt-1 text-sm text-kowr-gray">{summary}</p>
-          </div>
+    <Card bodyClassName="grid gap-5">
+      {/* Krok 1 – ocena modelu */}
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center md:gap-10">
+        <div>
+          <h2 className={`text-xl font-semibold ${kolorStanu}`}>{ocena.status}</h2>
+          <p className="mt-1 text-sm text-kowr-gray">{ocena.summary}</p>
         </div>
+        <Stat value={<span className={kolorStanu}>{ocena.percentyl.toFixed(0)}</span>} label="percentyl (0 sucho – 100 mokro)" />
+        <Stat value={ocena.zakres} label="przedział Q10–Q90" />
+        {ocena.prognoza_7d ? (
+          <Stat
+            value={`${ocena.prognoza_7d.ocena.toFixed(0)} (${ocena.prognoza_7d.q10.toFixed(0)}–${ocena.prognoza_7d.q90.toFixed(0)})`}
+            label={`prognoza na ${new Date(`${ocena.prognoza_7d.data}T12:00:00`).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}`}
+          />
+        ) : (
+          <Stat
+            value={ocena.zmiana_7d == null ? "–" : `${ocena.zmiana_7d > 0 ? "+" : ""}${ocena.zmiana_7d.toFixed(0)}`}
+            label="zmiana w 7 dni"
+          />
+        )}
       </div>
-      <div className="flex center flex-col border-t border-kowr-border bg-kowr-background px-6 py-5 md:border-l md:border-t-0">
-        <span className="text-xs text-kowr-gray">Percentyl wobec tej pory roku</span>
-        <strong className={`mt-1 text-4xl font-bold ${percentClass}`}>{percentyl?.toFixed(1) ?? "–"}</strong>
-        <span className="mt-1 text-center text-xs text-kowr-gray">0 = najsucho, 100 = najmokro<br />(10 lat)</span>
-      </div>
-      <div className="flex flex-col justify-center border-t border-kowr-border px-6 py-5 md:border-l md:border-t-0">
-        <span className="text-xs text-kowr-gray">Przedział niepewności</span>
-        <strong className="mt-1 text-xl font-bold text-kowr-text">{zakres}</strong>
-        <span className="mt-2 text-[11px] leading-4 text-kowr-gray">Percentyl mieści się w tym zakresie z 80% pewnością (Q10–Q90)</span>
-      </div>
-    </section>
+
+      {/* Krok 2 – sugestia dla uprawy, wynikająca z oceny */}
+      {s && (
+        <div className={`border-l-2 pl-4 ${kolorRyzyka[s.ryzyko] ?? "border-kowr-border"}`}>
+          <p className="text-sm font-medium text-kowr-text">{s.title}</p>
+          <p className="mt-1 text-sm text-kowr-gray">{s.detail}</p>
+          <p className="mt-1 text-xs text-kowr-gray/80">Na podstawie: {s.evidence}</p>
+        </div>
+      )}
+    </Card>
   );
 };

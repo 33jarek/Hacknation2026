@@ -40,6 +40,16 @@ export type RekomendacjaAI = {
   evidence: string;
 };
 
+export type SugestiaAI = {
+  title: string;
+  detail: string;
+  evidence: string;
+  ryzyko: "wysokie" | "umiarkowane" | "niskie" | "nadmiar wody";
+  prog: number;
+  faza_krytyczna: boolean;
+  uprawa: string | null;
+};
+
 export type OcenaAI = {
   status: string;
   summary: string;
@@ -51,6 +61,20 @@ export type OcenaAI = {
   miesiace_ryzyka: string[];
   causes: PrzyczynaAI[];
   recommendations: RekomendacjaAI[];
+  rekomendacje_retencyjne: RekomendacjaAI[];
+  rekomendacje_agrotechniczne: RekomendacjaAI[];
+  sugestia: SugestiaAI;
+  pewnosc: string;
+  trend: string;
+  zmiana_7d: number | null;
+  prognoza_7d: {
+    data: string;
+    ocena: number;
+    q10: number;
+    q90: number;
+    zrodlo_pogody: string;
+    opad_7_mm: number;
+  } | null;
   uprawa: string | null;
   pogoda: {
     temperatura_srednia_c: number | null;

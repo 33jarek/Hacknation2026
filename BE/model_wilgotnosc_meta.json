@@ -25,8 +25,12 @@
     "pojemnosc_wodna_mm",
     "wysokosc_m",
     "spadek_proc",
-    "wzgledna_wys_m"
+    "wzgledna_wys_m",
+    "stan_lag7",
+    "stan_lag14",
+    "stan_lag28"
   ],
+  "wersja_modelu": 2,
   "wersja_sklearn": "1.9.1",
   "trening": {
     "okres": [
@@ -36,51 +40,71 @@
     "rok_podzialu": 2022,
     "wierszy": 15400,
     "punktow": 44,
-    "utworzono": "2026-11-21"
+    "utworzono": "2026-11-22"
   },
   "wyniki_testu": {
-    "regula_bilans60": {
-      "MAE": 22.35,
-      "R2": -0.032,
-      "zgodnosc_klas": 0.413
+    "persystencja_7d": {
+      "MAE": 12.6,
+      "R2": 0.635,
+      "zgodnosc_klas": 0.634,
+      "trafnosc_niedoboru": 0.833,
+      "blad_do_15_pkt": 0.679
+    },
+    "v1_bez_stanu": {
+      "MAE": 20.28,
+      "R2": 0.171,
+      "zgodnosc_klas": 0.444,
+      "trafnosc_niedoboru": 0.699,
+      "blad_do_15_pkt": 0.464
     },
     "ridge": {
-      "MAE": 19.24,
-      "R2": 0.275,
-      "zgodnosc_klas": 0.46
+      "MAE": 9.9,
+      "R2": 0.785,
+      "zgodnosc_klas": 0.684,
+      "trafnosc_niedoboru": 0.872,
+      "blad_do_15_pkt": 0.778
     },
     "gradient_boosting": {
-      "MAE": 19.96,
-      "R2": 0.198,
-      "zgodnosc_klas": 0.45
+      "MAE": 9.63,
+      "R2": 0.793,
+      "zgodnosc_klas": 0.688,
+      "trafnosc_niedoboru": 0.87,
+      "blad_do_15_pkt": 0.796
+    },
+    "przedzial_10_90": {
+      "pokrycie": 0.795,
+      "margines": 3.34
     }
   },
   "waznosc_cech": {
-    "et0_7": 1.73,
-    "bilans_60_z": 1.523,
-    "bilans_30_z": 1.44,
-    "bilans_90_z": 1.403,
-    "opad_30": 0.327,
-    "bilans_7": 0.205,
-    "et0_30": 0.155,
-    "doy_sin": 0.111,
-    "et0_90": 0.107,
-    "opad_90": 0.095,
-    "bilans_60": 0.085,
-    "opad_60": 0.076,
-    "doy_cos": 0.052,
-    "opad_7": 0.022,
-    "bilans_90": 0.019,
-    "et0_60": 0.007,
-    "bilans_30": -0.017,
-    "dni_bez_opadu": -0.04,
-    "tmax_14": -0.054,
-    "piasek_0_30": -0.08,
-    "wzgledna_wys_m": -0.081,
-    "glina_0_30": -0.082,
-    "spadek_proc": -0.123,
-    "wysokosc_m": -0.127,
-    "c_org_0_30": -0.19,
-    "pojemnosc_wodna_mm": -0.211
+    "stan_lag7": 16.713,
+    "et0_7": 2.303,
+    "bilans_7": 1.732,
+    "opad_7": 0.84,
+    "stan_lag14": 0.477,
+    "stan_lag28": 0.347,
+    "doy_cos": 0.27,
+    "dni_bez_opadu": 0.07,
+    "bilans_90_z": 0.067,
+    "tmax_14": 0.049,
+    "bilans_30_z": 0.049,
+    "opad_30": 0.047,
+    "bilans_30": 0.041,
+    "doy_sin": 0.024,
+    "bilans_90": 0.016,
+    "et0_90": 0.011,
+    "bilans_60_z": 0.01,
+    "opad_60": 0.008,
+    "wysokosc_m": 0.007,
+    "pojemnosc_wodna_mm": 0.004,
+    "wzgledna_wys_m": 0.002,
+    "glina_0_30": 0.0,
+    "piasek_0_30": -0.005,
+    "c_org_0_30": -0.006,
+    "spadek_proc": -0.006,
+    "et0_60": -0.007,
+    "opad_90": -0.007,
+    "bilans_60": -0.017,
+    "et0_30": -0.027
   }
 }

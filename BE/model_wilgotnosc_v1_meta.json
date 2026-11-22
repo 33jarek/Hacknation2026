@@ -1,0 +1,86 @@
+{
+  "cechy": [
+    "opad_7",
+    "opad_30",
+    "opad_60",
+    "opad_90",
+    "et0_7",
+    "et0_30",
+    "et0_60",
+    "et0_90",
+    "bilans_7",
+    "bilans_30",
+    "bilans_60",
+    "bilans_90",
+    "bilans_30_z",
+    "bilans_60_z",
+    "bilans_90_z",
+    "tmax_14",
+    "dni_bez_opadu",
+    "doy_sin",
+    "doy_cos",
+    "glina_0_30",
+    "piasek_0_30",
+    "c_org_0_30",
+    "pojemnosc_wodna_mm",
+    "wysokosc_m",
+    "spadek_proc",
+    "wzgledna_wys_m"
+  ],
+  "wersja_sklearn": "1.9.1",
+  "trening": {
+    "okres": [
+      "2015-01-01",
+      "2025-12-31"
+    ],
+    "rok_podzialu": 2022,
+    "wierszy": 15400,
+    "punktow": 44,
+    "utworzono": "2026-11-21"
+  },
+  "wyniki_testu": {
+    "regula_bilans60": {
+      "MAE": 22.35,
+      "R2": -0.032,
+      "zgodnosc_klas": 0.413
+    },
+    "ridge": {
+      "MAE": 19.24,
+      "R2": 0.275,
+      "zgodnosc_klas": 0.46
+    },
+    "gradient_boosting": {
+      "MAE": 19.96,
+      "R2": 0.198,
+      "zgodnosc_klas": 0.45
+    }
+  },
+  "waznosc_cech": {
+    "et0_7": 1.73,
+    "bilans_60_z": 1.523,
+    "bilans_30_z": 1.44,
+    "bilans_90_z": 1.403,
+    "opad_30": 0.327,
+    "bilans_7": 0.205,
+    "et0_30": 0.155,
+    "doy_sin": 0.111,
+    "et0_90": 0.107,
+    "opad_90": 0.095,
+    "bilans_60": 0.085,
+    "opad_60": 0.076,
+    "doy_cos": 0.052,
+    "opad_7": 0.022,
+    "bilans_90": 0.019,
+    "et0_60": 0.007,
+    "bilans_30": -0.017,
+    "dni_bez_opadu": -0.04,
+    "tmax_14": -0.054,
+    "piasek_0_30": -0.08,
+    "wzgledna_wys_m": -0.081,
+    "glina_0_30": -0.082,
+    "spadek_proc": -0.123,
+    "wysokosc_m": -0.127,
+    "c_org_0_30": -0.19,
+    "pojemnosc_wodna_mm": -0.211
+  }
+}

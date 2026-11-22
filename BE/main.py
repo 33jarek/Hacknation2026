@@ -1,5 +1,6 @@
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from pathlib import Path
@@ -14,6 +15,8 @@ import pandas as pd
 # Import funkcji kolegi
 try:
     from .model import ocen as ocen_model, LimitDzienny
+    from . import rekomendacje
+    from .raport import zbuduj_pdf
     from .services.data_sources.weather import get_weather_context
     from .services.data_sources.parcel import (
         ParcelServiceError,
@@ -25,6 +28,8 @@ try:
     )
 except ImportError:
     from model import ocen as ocen_model, LimitDzienny
+    import rekomendacje
+    from raport import zbuduj_pdf
     from services.data_sources.weather import get_weather_context
     from services.data_sources.parcel import (
         ParcelServiceError,
@@ -59,17 +64,7 @@ app.add_middleware(
 # MODEL DANYCH WEJŚCIOWYCH
 # ==================================================
 
-UPRAWY = {
-    "zboza-ozime":    {"label": "Zboża ozime",           "sensitivity": 0.55},
-    "zboza-jare":     {"label": "Zboża jare",             "sensitivity": 0.60},
-    "kukurydza":      {"label": "Kukurydza",              "sensitivity": 0.80},
-    "rzepak":         {"label": "Rzepak i rzepik",        "sensitivity": 0.68},
-    "burak-cukrowy":  {"label": "Burak cukrowy",          "sensitivity": 0.78},
-    "ziemniaki":      {"label": "Ziemniaki",              "sensitivity": 0.82},
-    "straczkowe":     {"label": "Rośliny strączkowe",     "sensitivity": 0.70},
-    "uzytki-zielone": {"label": "Użytki zielone",         "sensitivity": 0.60},
-    "drzewa-owocowe": {"label": "Drzewa i krzewy owocowe","sensitivity": 0.72},
-}
+UPRAWY = rekomendacje.UPRAWY
 
 
 class OcenaInput(BaseModel):
@@ -98,139 +93,30 @@ def _pogoda_dla_ui(lat: float, lon: float, data_analizy: date) -> Optional[dict]
     }
 
 
-def _ocena_dla_ui(wynik: dict, szereg_czasowy: list[dict], uprawa: Optional[str] = None) -> dict:
-    percentyl = float(wynik.get("percentyl") or 50)
-    przedzial = wynik.get("przedzial_10_90")
-    if not przedzial and szereg_czasowy:
-        ostatni = szereg_czasowy[-1]
-        przedzial = [ostatni.get("q10"), ostatni.get("q90")]
-
-    profil = UPRAWY.get(uprawa or "", {"label": None, "sensitivity": 0.65})
-    sensitivity = profil["sensitivity"]
-    uprawa_label = profil.get("label")
-
-    # Próg niedoboru zależy od wrażliwości uprawy (bardziej wrażliwa = wyższy próg)
-    prog_silny    = 30 + sensitivity * 10   # 35–38 dla czułych upraw
-    prog_umiarko  = 50 + sensitivity * 5    # 52–54
-    prog_dobry    = 65 + sensitivity * 10   # 70–73
-
-    if percentyl < prog_silny:
-        status = "Silny niedobór wody"
-        poziom = "wysoki"
-        kolor = "red"
-    elif percentyl < prog_umiarko:
-        status = "Umiarkowany niedobór wody"
-        poziom = "umiarkowany"
-        kolor = "olive"
-    elif percentyl < prog_dobry:
-        status = "Zrównoważony stan wilgotności"
-        poziom = "umiarkowany"
-        kolor = "olive"
-    else:
-        status = "Dobra wilgotność gleby"
-        poziom = "niski"
-        kolor = "green"
-
-    podatnosc = wynik.get("podatnosc_odsetek_lat_z_niedoborem") or {}
-    wartosci = [float(value) for value in podatnosc.values()]
-    srednia = round(sum(wartosci) / len(wartosci), 2) if wartosci else None
-    wysokie_miesiace = [
-        miesiac for miesiac, value in sorted(
-            podatnosc.items(),
-            key=lambda item: item[1],
-            reverse=True,
-        )[:3]
-    ] if podatnosc else []
-
-    przyczyny = wynik.get("przyczyny") or []
-    causes = []
-    for pozycja in przyczyny[:3]:
-        text = str(pozycja)
-        if "bilans" in text.lower():
-            causes.append({"title": "Bilans wodny", "value": text, "detail": "Suma opadów i parowania określana na podstawie danych pogodowych."})
-        elif "opad" in text.lower():
-            causes.append({"title": "Opady", "value": text, "detail": "Krótki okres opadowy wpływa na bieżący stan wilgotności."})
-        elif "pojemność" in text.lower():
-            causes.append({"title": "Zdolność retencyjna gleby", "value": text, "detail": "Wynik opisuje zdolność profilu glebowego do magazynowania wody."})
-        else:
-            causes.append({"title": "Czynnik agrometeorologiczny", "value": text, "detail": "Informacja wyliczona przez model wilgotności gleby."})
-    if not causes:
-        causes = [{
-            "title": "Dane klimatyczne",
-            "value": f"Percentyl: {percentyl:.1f}",
-            "detail": "Ocena oparta na rozkładzie wilgotności gleby z wielolecia.",
-        }]
-
-    # Rekomendacje zależne od uprawy i percentylu
-    recommendations = []
-    irr_threshold = 35 - sensitivity * 5  # wrażliwsze uprawy wymagają wcześniejszego nawadniania
-
-    if percentyl < prog_umiarko:
-        recommendations.append({
-            "title": "Zwiększ retencję wody na działce",
-            "category": "retention",
-            "priority": "Pilne",
-            "detail": "Zastosuj mulczowanie, resztki pożniwne i elementy spowalniające odpływ, dobierając rozwiązania do ukształtowania terenu.",
-            "evidence": f"Percentyl modelu: {percentyl:.1f}" + (f" | Uprawa: {uprawa_label}" if uprawa_label else ""),
-        })
-    else:
-        recommendations.append({
-            "title": "Podtrzymuj zdolność retencji pola",
-            "category": "retention",
-            "priority": "Polecane",
-            "detail": "Kontynuuj ochronę struktury gleby i ograniczaj intensywny spływ podczas opadów.",
-            "evidence": f"Percentyl modelu: {percentyl:.1f}",
-        })
-
-    recommendations.append({
-        "title": "Wykonaj zabiegi agrotechniczne chroniące wilgoć",
-        "category": "agrotechnical",
-        "priority": "Pilne" if percentyl < 40 else "Polecane",
-        "detail": "Dobierz termin uprawy, termin i głębokość siewu oraz ochronę resztkami pożniwymi do bieżącego stanu pola."
-        + (f" Dla uprawy {uprawa_label} szczególnie ważna jest ciągłość zaopatrzenia w wodę." if uprawa_label else ""),
-        "evidence": ", ".join(wysokie_miesiace) if wysokie_miesiace else "Brak danych o miesiącach ryzyka",
-    })
-
-    if percentyl < irr_threshold:
-        recommendations.append({
-            "title": "Przygotuj i rozpocznij nawadnianie",
-            "category": "irrigation",
-            "priority": "Pilne",
-            "detail": "Sprawdź wilgotność w warstwie korzeniowej i zastosuj nawadnianie dawkami dopasowanymi do uprawy oraz przepuszczalności gleby."
-            + (f" {uprawa_label} ma wysoką wrażliwość na suszę ({int(sensitivity*100)}%)." if uprawa_label else ""),
-            "evidence": f"Przedział modelu (percentyl): {przedzial[0]:.0f}–{przedzial[1]:.0f}"
-            if przedzial else "Brak przedziału niepewności",
-        })
-    else:
-        recommendations.append({
-            "title": "Monitoruj potrzebę nawadniania",
-            "category": "irrigation",
-            "priority": "Długoterminowe" if percentyl >= prog_dobry else "Polecane",
-            "detail": "Kontroluj wilgotność gleby i opady przed podjęciem decyzji o nawodnieniu; unikaj nawadniania przy zaspokojonej potrzebie uprawy.",
-            "evidence": f"Percentyl modelu: {percentyl:.1f}",
-        })
-
-    if przedzial:
-        zakres = f"{float(przedzial[0]):.0f}–{float(przedzial[1]):.0f}"
-    else:
-        zakres = "brak przedziału"
-
+def _ocena_dla_ui(wynik: dict, szereg_czasowy: list[dict], uprawa: Optional[str], dzien: date) -> dict:
+    """Łańcuch: KROK 1 ocena AI -> KROK 2 sugestia dla uprawy -> KROK 3 rekomendacje (rekomendacje.py)."""
+    r = rekomendacje.zbuduj(wynik, szereg_czasowy, uprawa, dzien)
+    k1, k2 = r["krok1"], r["krok2"]
+    kolor = {"wysokie": "red", "umiarkowane": "olive", "niskie": k1["kolor"], "nadmiar wody": "green"}[k2["ryzyko"]]
     return {
-        "status": status,
-        "summary": (
-            f"Gleba jest wilgotniejsza niż w {percentyl:.0f}% dni o tej porze roku "
-            f"z ostatnich 10 lat (50 = typowo)."
-            + (f" Progi dopasowane do uprawy: {uprawa_label}." if uprawa_label else "")
-        ),
-        "percentyl": round(percentyl, 1),
-        "poziom": poziom,
+        "status": k1["stan"],
+        "summary": k1["opis"],
+        "percentyl": round(float(wynik.get("percentyl") or 50), 1),
+        "poziom": k2["ryzyko"],
         "kolor": kolor,
-        "zakres": zakres,
-        "srednia_podatnosc": srednia,
-        "miesiace_ryzyka": wysokie_miesiace,
-        "causes": causes,
-        "recommendations": recommendations,
-        "uprawa": uprawa_label,
+        "zakres": r["zakres"],
+        "pewnosc": k1["pewnosc"],
+        "trend": k1["trend"],
+        "zmiana_7d": k1["zmiana_7d"],
+        "prognoza_7d": r["prognoza_7d"],
+        "sugestia": {k: k2[k] for k in ("title", "detail", "evidence", "ryzyko", "prog", "faza_krytyczna", "uprawa")},
+        "srednia_podatnosc": r["srednia_podatnosc"],
+        "miesiace_ryzyka": r["miesiace_ryzyka"],
+        "causes": r["przyczyny"],
+        "rekomendacje_retencyjne": r["retencja"],
+        "rekomendacje_agrotechniczne": r["agrotechnika"],
+        "recommendations": r["retencja"] + r["agrotechnika"],
+        "uprawa": k2["uprawa"],
         "pogoda": wynik.get("pogoda"),
         "pogoda_status": "unavailable" if wynik.get("pogoda") is None else "available",
     }
@@ -383,6 +269,8 @@ def ocena(
         scalona = {**pogoda, **{k: v for k, v in pogoda_model.items() if v is not None}}
         wynik["pogoda"] = scalona or None
 
+        ocena_ai = _ocena_dla_ui(wynik, wykres_czasowy, dane.uprawa, dane.data_analizy)
+
         return {
             "status": "success",
 
@@ -399,8 +287,8 @@ def ocena(
                 "dzien_wykresu": dzien_wykresu,
                 "regresja": regresja
             },
-            "ocena_ai": _ocena_dla_ui(wynik, wykres_czasowy, dane.uprawa),
-            "rekomendacje": _ocena_dla_ui(wynik, wykres_czasowy, dane.uprawa)["recommendations"],
+            "ocena_ai": ocena_ai,
+            "rekomendacje": ocena_ai["recommendations"],
         }
 
     except HTTPException:
@@ -536,6 +424,32 @@ def lokalizacja_dzialka(id: str):
         raise HTTPException(status_code=502, detail=f"Usługa działek niedostępna ({exc.__class__.__name__})")
     lat, lon = parcel["centroid"]["lat"], parcel["centroid"]["lon"]
     return {"lat": lat, "lon": lon, "label": _etykieta_dzialki(parcel), "parcel": parcel, "parcel_error": None}
+
+
+# ==================================================
+# RAPORT PDF
+# ==================================================
+
+class RaportInput(OcenaInput):
+    lokalizacja_label: Optional[str] = None
+    dzialka: Optional[dict] = None
+
+
+@app.post("/api/raport")
+def raport(dane: RaportInput):
+    odp = ocena(dane=OcenaInput(lat=dane.lat, lon=dane.lon, data_analizy=dane.data_analizy, uprawa=dane.uprawa))
+    try:
+        pdf = zbuduj_pdf(
+            odp,
+            {"label": dane.lokalizacja_label or f"{dane.lat:.4f}, {dane.lon:.4f}", "lat": dane.lat, "lon": dane.lon},
+            dane.dzialka,
+            odp["ocena_ai"].get("uprawa"),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Nie udało się wygenerować raportu: {e}")
+    nazwa = f"raport_wilgotnosc_{dane.data_analizy.isoformat()}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{nazwa}"'})
 
 
 @app.get("/api/uprawy")

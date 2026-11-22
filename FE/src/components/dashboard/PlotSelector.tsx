@@ -37,10 +37,14 @@ type PlotSelectorProps = {
   onDateChange: (date: string) => void;
   onAnalyze: () => void;
   isAnalyzing?: boolean;
+  onReport: () => void;
+  canReport: boolean;
+  isReporting?: boolean;
 };
 
 const inputCls =
-  "h-11 w-full min-w-0 rounded-xl border border-kowr-border bg-kowr-background px-3.5 text-sm font-normal text-kowr-text outline-none focus:border-kowr-light-green";
+  "h-10 w-full min-w-0 rounded-md border border-kowr-border bg-kowr-white px-3 text-sm font-normal text-kowr-text outline-none focus:border-kowr-forest";
+const labelCls = "flex h-5 items-end text-xs text-kowr-gray";
 
 export const PlotSelector = ({
   lokalizacja,
@@ -51,13 +55,15 @@ export const PlotSelector = ({
   onDateChange,
   onAnalyze,
   isAnalyzing = false,
+  onReport,
+  canReport,
+  isReporting = false,
 }: PlotSelectorProps) => {
   const [tryb, setTryb] = useState<TrybWyszukiwania>("adres");
   const [zapytanie, setZapytanie] = useState("");
   const [szukam, setSzukam] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
-  const [mapaWidoczna, setMapaWidoczna] = useState(true);
   const seq = useRef(0);
 
   const aktywnyTryb = TRYBY.find((t) => t.key === tryb)!;
@@ -124,13 +130,12 @@ export const PlotSelector = ({
   const p = lokalizacja.parcel;
 
   return (
-    <section className="rounded-2xl border border-kowr-border bg-kowr-white p-4 shadow-[0_8px_30px_rgba(31,91,70,0.05)]">
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_170px_auto]">
+    <section className="rounded-lg border border-kowr-border bg-kowr-white p-5">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px_170px_auto] lg:items-end">
         {/* Wyszukiwarka lokalizacji */}
         <form onSubmit={handleSearch} className="grid gap-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-kowr-gray">Znajdź działkę</span>
-            <div role="tablist" className="flex gap-1 rounded-lg bg-kowr-background p-0.5">
+          <div className={labelCls}>
+            <div role="tablist" className="flex gap-4">
               {TRYBY.map((t) => (
                 <button
                   key={t.key}
@@ -141,10 +146,10 @@ export const PlotSelector = ({
                     setTryb(t.key);
                     setBlad(null);
                   }}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  className={`border-b pb-px transition-colors ${
                     tryb === t.key
-                      ? "bg-kowr-forest text-kowr-white"
-                      : "text-kowr-gray hover:text-kowr-forest"
+                      ? "border-kowr-forest font-medium text-kowr-forest"
+                      : "border-transparent hover:text-kowr-text"
                   }`}
                 >
                   {t.label}
@@ -164,7 +169,7 @@ export const PlotSelector = ({
             <button
               type="submit"
               disabled={szukam}
-              className="h-11 shrink-0 rounded-xl border border-kowr-forest px-4 text-sm font-semibold text-kowr-forest transition-colors hover:bg-kowr-forest hover:text-kowr-white disabled:cursor-wait disabled:opacity-60"
+              className="h-10 shrink-0 rounded-md border border-kowr-border px-4 text-sm text-kowr-text transition-colors hover:border-kowr-forest hover:text-kowr-forest disabled:cursor-wait disabled:opacity-60"
             >
               {szukam ? "Szukam…" : "Szukaj"}
             </button>
@@ -172,8 +177,8 @@ export const PlotSelector = ({
         </form>
 
         {/* Uprawa */}
-        <label className="grid gap-1.5 text-xs font-semibold text-kowr-gray">
-          Uprawa
+        <label className="grid gap-1.5">
+          <span className={labelCls}>Uprawa</span>
           <select value={uprawa} onChange={(e) => onUpravaChange(e.target.value)} className={inputCls}>
             <option value="">Wybierz uprawę</option>
             {UPRAWY.map((u) => (
@@ -183,8 +188,8 @@ export const PlotSelector = ({
         </label>
 
         {/* Data */}
-        <label className="grid gap-1.5 text-xs font-semibold text-kowr-gray">
-          Data analizy
+        <label className="grid gap-1.5">
+          <span className={labelCls}>Data analizy</span>
           <input
             type="date"
             value={date}
@@ -195,29 +200,37 @@ export const PlotSelector = ({
           />
         </label>
 
-        {/* Przycisk */}
-        <div className="flex items-end">
+        {/* Przyciski */}
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={onAnalyze}
             disabled={isAnalyzing || szukam}
-            className="h-11 w-full rounded-xl bg-kowr-forest px-5 text-sm font-semibold text-kowr-white transition-colors hover:bg-kowr-green disabled:cursor-wait disabled:opacity-70 lg:w-auto"
+            className="h-10 w-full rounded-md bg-kowr-forest px-5 text-sm font-medium text-kowr-white transition-colors hover:bg-kowr-green disabled:cursor-wait disabled:opacity-70 lg:w-auto"
           >
             {isAnalyzing ? "Analizowanie…" : "Analizuj"}
+          </button>
+          <button
+            type="button"
+            onClick={onReport}
+            disabled={!canReport || isReporting || isAnalyzing}
+            title={canReport ? "Pobierz raport z analizy w formacie PDF" : "Najpierw wykonaj analizę"}
+            className="h-10 w-full whitespace-nowrap rounded-md border border-kowr-border px-4 text-sm text-kowr-text transition-colors hover:border-kowr-forest hover:text-kowr-forest disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+          >
+            {isReporting ? "Generowanie…" : "Pobierz raport PDF"}
           </button>
         </div>
       </div>
 
       {blad && (
-        <p role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+        <p role="alert" className="mt-3 text-sm text-red-700">
           {blad}
         </p>
       )}
 
       {/* Mapa + informacje o wybranej lokalizacji */}
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
-        {mapaWidoczna && (
-          <div className="relative h-90 overflow-hidden rounded-xl border border-kowr-border">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="relative h-90 overflow-hidden rounded-md border border-kowr-border">
             <MapaPolski
               lat={lokalizacja.lat}
               lon={lokalizacja.lon}
@@ -225,44 +238,24 @@ export const PlotSelector = ({
               focusKey={focusKey}
               onPick={handleMapPick}
             />
-            <div className="pointer-events-none absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-kowr-white/90 px-3 py-1 text-[11px] font-medium text-kowr-gray shadow">
-              Kliknij na mapie, aby wskazać działkę
-            </div>
-          </div>
-        )}
+        </div>
 
-        <aside
-          className={`flex flex-col gap-3 rounded-xl border border-kowr-border bg-kowr-background p-4 text-sm ${
-            mapaWidoczna ? "" : "lg:col-span-2"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-kowr-gray">
-                Wybrana lokalizacja
-              </p>
-              <p className="mt-1 font-semibold leading-snug text-kowr-text" title={lokalizacja.label}>
-                {szukam ? "Wyszukiwanie…" : lokalizacja.label}
-              </p>
-              <p className="mt-0.5 font-mono text-xs text-kowr-gray">
-                {lokalizacja.lat.toFixed(5)}, {lokalizacja.lon.toFixed(5)}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setMapaWidoczna((v) => !v)}
-              className="shrink-0 text-xs text-kowr-gray hover:text-kowr-forest"
-            >
-              {mapaWidoczna ? "Ukryj mapę" : "Pokaż mapę"}
-            </button>
+        <aside className="flex flex-col gap-3 text-sm">
+          <div className="min-w-0">
+            <p className="font-medium leading-snug text-kowr-text" title={lokalizacja.label}>
+              {szukam ? "Wyszukiwanie…" : lokalizacja.label}
+            </p>
+            <p className="mt-0.5 text-xs tabular-nums text-kowr-gray">
+              {lokalizacja.lat.toFixed(5)}, {lokalizacja.lon.toFixed(5)}
+            </p>
           </div>
 
           {p ? (
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t border-kowr-border pt-3 text-xs">
               <dt className="text-kowr-gray">Działka</dt>
-              <dd className="font-semibold text-kowr-text">{p.numer ?? "—"}</dd>
+              <dd className="font-medium text-kowr-text">{p.numer ?? "—"}</dd>
               <dt className="text-kowr-gray">Identyfikator</dt>
-              <dd className="break-all font-mono text-kowr-text">{p.id}</dd>
+              <dd className="break-all text-kowr-text">{p.id}</dd>
               {p.obreb && (
                 <>
                   <dt className="text-kowr-gray">Obręb</dt>
@@ -284,19 +277,18 @@ export const PlotSelector = ({
               {p.powierzchnia_ha != null && (
                 <>
                   <dt className="text-kowr-gray">Powierzchnia</dt>
-                  <dd className="font-semibold text-kowr-forest">{p.powierzchnia_ha} ha</dd>
+                  <dd className="text-kowr-text">{p.powierzchnia_ha} ha</dd>
                 </>
               )}
             </dl>
           ) : lokalizacja.parcel_error ? (
             <p className="border-t border-kowr-border pt-3 text-xs leading-relaxed text-kowr-gray">
-              <span className="font-semibold text-amber-700">Bez obrysu działki.</span>{" "}
-              {lokalizacja.parcel_error}. Analiza i tak działa dla wskazanego punktu.
+              Nie udało się pobrać obrysu działki ({lokalizacja.parcel_error.toLowerCase()}). Analiza działa
+              dla wskazanego punktu.
             </p>
           ) : (
             <p className="border-t border-kowr-border pt-3 text-xs leading-relaxed text-kowr-gray">
-              Wyszukaj adres lub numer działki albo kliknij na mapie. Potem kliknij{" "}
-              <strong className="text-kowr-forest">Analizuj</strong>.
+              Kliknij na mapie albo wyszukaj adres, numer działki lub współrzędne.
             </p>
           )}
         </aside>

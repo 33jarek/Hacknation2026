@@ -10,7 +10,7 @@ import { VulnerabilityCard } from "@/components/dashboard/VulnerabilityCard";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useOcenaWilgotnosci } from "@Hooks/useOcenaWilgoci";
-import type { WybranaLokalizacja } from "@Hooks/lokalizacja";
+import { pobierzRaportPdf, type WybranaLokalizacja } from "@Hooks/lokalizacja";
 
 export const Route = createFileRoute("/")(
 {
@@ -39,6 +39,21 @@ function Index() {
     enabled: autoAnaliza,
   });
 
+  const [raportTrwa, setRaportTrwa] = useState(false);
+  const [raportBlad, setRaportBlad] = useState<string | null>(null);
+
+  async function handleReport() {
+    setRaportTrwa(true);
+    setRaportBlad(null);
+    try {
+      await pobierzRaportPdf({ lokalizacja, dataAnalizy: analysisDate, uprawa });
+    } catch (e) {
+      setRaportBlad(e instanceof Error ? e.message : "Nie udało się pobrać raportu");
+    } finally {
+      setRaportTrwa(false);
+    }
+  }
+
   function handleAnalyze() {
     if (!autoAnaliza) setAutoAnaliza(true);
     else void ocena.refetch();
@@ -47,15 +62,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-kowr-background text-kowr-text">
       <Header />
-      <main className="mx-auto max-w-360 px-5 py-6 md:px-8">
-        <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-kowr-gray">
-            Panel gospodarstwa
-          </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-kowr-text">
-            Stan i prognoza działki
-          </h2>
-        </div>
+      <main className="mx-auto grid max-w-360 gap-4 px-5 py-6 md:px-8">
         <PlotSelector
           lokalizacja={lokalizacja}
           uprawa={uprawa}
@@ -65,63 +72,60 @@ function Index() {
           onDateChange={setAnalysisDate}
           onAnalyze={handleAnalyze}
           isAnalyzing={ocena.isFetching}
+          onReport={() => void handleReport()}
+          canReport={ocena.isSuccess && !ocena.isFetching}
+          isReporting={raportTrwa}
         />
+
+        {raportBlad && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Nie udało się wygenerować raportu. {raportBlad}
+          </div>
+        )}
 
         {ocena.isError && (
           <div
             role="alert"
-            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           >
-            <span>
-              <strong>Analiza nie powiodła się.</strong> {ocena.error.message}
-            </span>
+            <span>Analiza nie powiodła się. {ocena.error.message}</span>
             <button
               type="button"
               onClick={() => void ocena.refetch()}
-              className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold hover:bg-red-100"
+              className="shrink-0 rounded-md border border-red-300 px-3 py-1 text-xs font-medium hover:bg-red-100"
             >
               Spróbuj ponownie
             </button>
           </div>
         )}
 
-        {/* Status */}
-        <div className="mt-4">
-          <StatusCard ocena={ocena.data?.ocena_ai} />
-        </div>
+        <StatusCard ocena={ocena.data?.ocena_ai} />
 
-        {/* Wykres + Pogoda + Rekomendacje */}
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.7fr)]">
+        <div className="grid gap-4 lg:grid-cols-3">
           <ForecastPlaceholder
+            className="lg:col-span-2"
             dane={ocena.data?.wykresy.szereg_czasowy}
             isLoading={ocena.isLoading || ocena.isFetching}
             isError={ocena.isError}
             isFallback={ocena.data?.status === "fallback"}
           />
-          <div className="grid gap-4">
+          <div className="grid gap-4 lg:grid-rows-2">
             <WeatherPlaceholder ocena={ocena.data?.ocena_ai} />
-            <ActionsCard recommendations={ocena.data?.rekomendacje} />
+            <VulnerabilityCard ocena={ocena.data?.ocena_ai} />
           </div>
         </div>
 
-        {/* Przyczyny + Historia */}
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           <CausesCard causes={ocena.data?.ocena_ai.causes} />
-          <VulnerabilityCard ocena={ocena.data?.ocena_ai} />
+          <ActionsCard
+            title="Rekomendacje retencyjne"
+            recommendations={ocena.data?.ocena_ai.rekomendacje_retencyjne}
+          />
+          <ActionsCard
+            title="Rekomendacje agrotechniczne"
+            recommendations={ocena.data?.ocena_ai.rekomendacje_agrotechniczne}
+          />
         </div>
-
-        {/* Uprawa badge */}
-        {ocena.data?.ocena_ai.uprawa && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-kowr-border bg-kowr-white px-4 py-3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-kowr-forest" aria-hidden="true">
-              <path d="M12 22V12M12 12C12 7 7 2 2 2c0 5 5 8 10 10ZM12 12c0-5 5-10 10-10-5 0-10 5-10 10Z" />
-            </svg>
-            <span className="text-sm text-kowr-text">
-              Analiza dostosowana do uprawy:{" "}
-              <strong className="text-kowr-forest">{ocena.data.ocena_ai.uprawa}</strong>
-            </span>
-          </div>
-        )}
       </main>
       <Footer />
     </div>

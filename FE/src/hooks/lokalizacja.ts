@@ -24,7 +24,7 @@ export type WybranaLokalizacja = {
 
 export type TrybWyszukiwania = "adres" | "dzialka" | "wspolrzedne";
 
-function apiBase(): string {
+export function apiBase(): string {
   const raw = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
   if (!raw) return "/api";
   return raw.endsWith("/api") ? raw : `${raw}/api`;
@@ -81,4 +81,51 @@ export function parsujWspolrzedne(text: string): [number, number] | null {
 
 export function wPolsce(lat: number, lon: number) {
   return lat >= 49 && lat <= 55 && lon >= 14 && lon <= 25;
+}
+
+/** Pobiera raport PDF z analizy i zapisuje go w przeglądarce. */
+export async function pobierzRaportPdf(params: {
+  lokalizacja: WybranaLokalizacja;
+  dataAnalizy: string;
+  uprawa: string;
+}): Promise<void> {
+  const { lokalizacja, dataAnalizy, uprawa } = params;
+  // geometria działki nie jest potrzebna w raporcie
+  const dzialka = lokalizacja.parcel ? { ...lokalizacja.parcel, geometry: undefined } : null;
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase()}/raport`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lat: lokalizacja.lat,
+        lon: lokalizacja.lon,
+        data_analizy: dataAnalizy,
+        uprawa: uprawa || null,
+        lokalizacja_label: lokalizacja.label,
+        dzialka,
+      }),
+    });
+  } catch {
+    throw new Error("Brak połączenia z serwerem");
+  }
+  if (!response.ok) {
+    let message = `Błąd ${response.status}`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") message = body.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `raport_wilgotnosc_${dataAnalizy}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

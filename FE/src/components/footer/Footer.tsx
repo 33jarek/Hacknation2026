@@ -34,8 +34,8 @@ const links = [
 
 export const Footer = () => {
   return (
-    <footer className="mt-10 border-t border-kowr-border bg-kowr-white">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-6 md:px-8 md:flex-row md:items-center md:justify-between">
+    <footer className="mt-6 border-t border-kowr-border bg-kowr-white">
+      <div className="mx-auto flex max-w-360 flex-col gap-5 px-5 py-6 md:px-8 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Logo w={52} h={52} />
           <div>

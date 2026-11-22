@@ -1,23 +1,22 @@
 import type { PrzyczynaAI } from "@Hooks/useOcenaWilgoci";
+import { Card } from "./Card";
 
-type Props = { causes?: PrzyczynaAI[] };
+type Props = { causes?: PrzyczynaAI[]; className?: string };
 
-export const CausesCard = ({ causes = [] }: Props) => {
-  return (
-    <section className="rounded-2xl border border-kowr-border bg-kowr-white p-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-kowr-gray">Przyczyny</p>
-      <h2 className="mt-1 text-lg font-bold text-kowr-text">Co wpływa na wilgotność</h2>
-      <div className="mt-4 grid gap-2">
-        {(causes.length ? causes : [{ title: "Analiza AI", value: "Ładowanie", detail: "Backend przygotowuje przyczyny na podstawie wyników modelu." }]).map((cause) => (
-          <div key={cause.title} className="rounded-xl border border-kowr-border bg-kowr-background p-3">
-            <div className="flex items-start justify-between gap-3">
-              <strong className="text-sm text-kowr-text">{cause.title}</strong>
-              <span className="text-right text-xs font-bold text-kowr-forest">{cause.value}</span>
-            </div>
-            <p className="mt-1 text-[11px] leading-4 text-kowr-gray">{cause.detail}</p>
-          </div>
+export const CausesCard = ({ causes = [], className = "" }: Props) => (
+  <Card title="Co wpływa na wilgotność" className={className}>
+    {causes.length ? (
+      <ul className="divide-y divide-kowr-border">
+        {causes.map((cause, i) => (
+          <li key={i} className="py-3 first:pt-0 last:pb-0">
+            <div className="text-sm font-medium text-kowr-text">{cause.title}</div>
+            <div className="mt-0.5 text-sm text-kowr-text/80">{cause.value}</div>
+            <div className="mt-1 text-xs text-kowr-gray">{cause.detail}</div>
+          </li>
         ))}
-      </div>
-    </section>
-  );
-};
+      </ul>
+    ) : (
+      <p className="text-sm text-kowr-gray">Pojawi się po analizie.</p>
+    )}
+  </Card>
+);

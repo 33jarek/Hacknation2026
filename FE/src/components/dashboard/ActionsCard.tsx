@@ -1,33 +1,30 @@
 import type { RekomendacjaAI } from "@Hooks/useOcenaWilgoci";
+import { Card } from "./Card";
 
-type Props = { recommendations?: RekomendacjaAI[] };
+type Props = { title: string; recommendations?: RekomendacjaAI[]; className?: string };
 
-export const ActionsCard = ({ recommendations = [] }: Props) => {
-  const actions = recommendations.length ? recommendations : [{
-    title: "Ładowanie rekomendacji AI",
-    detail: "Backend przygotowuje zalecenia na podstawie wyniku modelu.",
-    priority: "Oczekuj",
-  }];
-  return (
-    <section className="rounded-2xl border border-kowr-border bg-kowr-white p-5">
-      <div className="mb-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-kowr-gray">Rekomendacje</p>
-        <h2 className="mt-1 text-lg font-bold text-kowr-text">Co zrobić dalej</h2>
-      </div>
-      <div className="divide-y divide-kowr-border">
-        {actions.map((action, index) => (
-          <button key={action.title} className="grid w-full grid-cols-[32px_1fr] gap-3 py-3 text-left">
-            <span className="flex center size-8 rounded-full bg-kowr-sage/35 text-xs font-bold text-kowr-forest">{index + 1}</span>
-            <span>
-              <span className="flex items-center justify-between gap-2">
-                <strong className="text-sm text-kowr-text">{action.title}</strong>
-                <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-kowr-gray">{action.priority}</span>
-              </span>
-              <span className="mt-1 block text-xs leading-5 text-kowr-gray">{action.detail}</span>
-            </span>
-          </button>
+const kolorPriorytetu = (p: string) =>
+  p === "Pilne" ? "text-red-700" : p === "Polecane" ? "text-kowr-forest" : "text-kowr-gray";
+
+export const ActionsCard = ({ title, recommendations = [], className = "" }: Props) => (
+  <Card title={title} className={className}>
+    {recommendations.length ? (
+      <ul className="divide-y divide-kowr-border">
+        {recommendations.map((action, i) => (
+          <li key={i} className="py-3 first:pt-0 last:pb-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-sm font-medium text-kowr-text">{action.title}</span>
+              <span className={`shrink-0 text-xs ${kolorPriorytetu(action.priority)}`}>{action.priority}</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-kowr-gray">{action.detail}</p>
+            {action.evidence && (
+              <p className="mt-1 text-[11px] leading-4 text-kowr-gray/80">Na podstawie: {action.evidence}</p>
+            )}
+          </li>
         ))}
-      </div>
-    </section>
-  );
-};
+      </ul>
+    ) : (
+      <p className="text-sm text-kowr-gray">Pojawią się po analizie.</p>
+    )}
+  </Card>
+);
