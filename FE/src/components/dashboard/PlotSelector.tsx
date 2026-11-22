@@ -42,6 +42,13 @@ type PlotSelectorProps = {
   isReporting?: boolean;
 };
 
+// zakres dat: ostatnie 10 lat do dziś (czas lokalny)
+const isoLokalnie = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const DZIS = new Date();
+const DATA_MAX = isoLokalnie(DZIS);
+const DATA_MIN = isoLokalnie(new Date(DZIS.getFullYear() - 10, DZIS.getMonth(), DZIS.getDate()));
+
 const inputCls =
   "h-10 w-full min-w-0 rounded-md border border-kowr-border bg-kowr-white px-3 text-sm font-normal text-kowr-text outline-none focus:border-kowr-forest";
 const labelCls = "flex h-5 items-end text-xs text-kowr-gray";
@@ -193,8 +200,8 @@ export const PlotSelector = ({
           <input
             type="date"
             value={date}
-            min="2016-01-01"
-            max="2026-11-21"
+            min={DATA_MIN}
+            max={DATA_MAX}
             onChange={(e) => onDateChange(e.target.value)}
             className={inputCls}
           />
@@ -215,7 +222,7 @@ export const PlotSelector = ({
             onClick={onReport}
             disabled={!canReport || isReporting || isAnalyzing}
             title={canReport ? "Pobierz raport z analizy w formacie PDF" : "Najpierw wykonaj analizę"}
-            className="h-10 w-full whitespace-nowrap rounded-md border border-kowr-border px-4 text-sm text-kowr-text transition-colors hover:border-kowr-forest hover:text-kowr-forest disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+            className="h-10 w-full whitespace-nowrap rounded-md bg-kowr-olive px-4 text-sm font-medium text-kowr-text transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
           >
             {isReporting ? "Generowanie…" : "Pobierz raport PDF"}
           </button>
