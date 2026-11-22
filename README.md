@@ -40,7 +40,7 @@ Dane o suszy są dostępne: reanalizy klimatyczne, mapy glebowe, modele terenu, 
 - **Ocena stanu wilgotności (model AI):** gdzie dziś jest wilgotność gleby 0–100 cm na tle tej samej pory roku z ostatnich 10 lat (percentyl 0–100). Do tego przedział niepewności, trend z 7 dni i **prognoza na 7 dni**.
 - **Historyczna podatność działki:** w ilu latach na 10 i w których miesiącach (IV–IX) występował niedobór.
 - **Sugestia dla wybranej uprawy:** ocena zestawiona z wrażliwością uprawy i jej fazą krytyczną (np. kukurydza: wiechowanie w VII–VIII).
-- **Rekomendacje retencyjne, agrotechniczne i nawadniania.** Każda wynika z oceny i z wykresu regresji liniowej lokalnej modelu ai.
+- **Rekomendacje retencyjne, agrotechniczne i nawadniania.** Każda rekomendacja wynika z oceny stanu wilgotności działki i z przyczyn niedoboru wskazanych przez model AI.
 - **Przyczyny:** czynniki, które w danej chwili najbardziej odbiegają od normy, np. bilans wodny, dni bez opadu, temperatura, pojemność wodna gleby.
 - **Raport PDF** gotowy do zapisania lub wydruku. Zawiera stan, przyczyny, rekomendacje, datę, źródła danych, metodykę i ograniczenia.
 
