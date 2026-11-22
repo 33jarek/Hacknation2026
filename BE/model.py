@@ -560,7 +560,8 @@ def ocen(lat, lon, data_analizy):
     # podatność: w ilu latach w danym miesiącu przeważał niedobór (ocena < 30)
     sez = c[c.index.month.isin([4, 5, 6, 7, 8, 9])]
     mies = sez.groupby([sez.index.year, sez.index.month])["ocena"].mean().unstack()
-    podatnosc = (mies < 30).mean().round(2)
+    # liczone tylko z lat, w których dany miesiąc ma dane (NaN nie może liczyć się jako "brak niedoboru")
+    podatnosc = (mies < 30).where(mies.notna()).mean().fillna(0).round(2)
     nazwy = {4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX"}
 
     return {

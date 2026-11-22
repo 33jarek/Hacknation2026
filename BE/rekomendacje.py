@@ -397,7 +397,8 @@ def przyczyny(cechy: dict) -> list[dict]:
 
 # ------------------------------------------------------------------ całość
 def zbuduj(wynik: dict, szereg: list[dict], uprawa_key: Optional[str], dzien: date) -> dict:
-    percentyl = float(wynik.get("percentyl") or 50)
+    # `is None`, nie `or`: percentyl 0 (najsilniejsza susza) to poprawna wartość
+    percentyl = float(50 if wynik.get("percentyl") is None else wynik["percentyl"])
     przedzial = wynik.get("przedzial_10_90") or [None, None]
     q10, q90 = _f(przedzial[0]), _f(przedzial[1])
     cechy = wynik.get("cechy") or {}

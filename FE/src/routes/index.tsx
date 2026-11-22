@@ -4,6 +4,7 @@ import { ActionsCard } from "@/components/dashboard/ActionsCard";
 import { CausesCard } from "@/components/dashboard/CausesCard";
 import { ForecastPlaceholder } from "@/components/dashboard/ForecastPlaceholder";
 import { PlotSelector } from "@/components/dashboard/PlotSelector";
+import { czyPoprawnaData, DATA_MIN, DATA_MAX } from "@/components/dashboard/zakresDat";
 import { StatusCard } from "@/components/dashboard/StatusCard";
 import { WeatherPlaceholder } from "@/components/dashboard/WeatherPlaceholder";
 import { VulnerabilityCard } from "@/components/dashboard/VulnerabilityCard";
@@ -30,14 +31,25 @@ function Index() {
   const [analysisDate, setAnalysisDate] = useState("2024-07-15");
   // Po pierwszym "Analizuj" każda zmiana działki/daty/uprawy odświeża analizę sama.
   const [autoAnaliza, setAutoAnaliza] = useState(false);
+  const dataPoprawna = czyPoprawnaData(analysisDate);
 
   const ocena = useOcenaWilgotnosci({
     lat: lokalizacja.lat,
     lon: lokalizacja.lon,
     dataAnalizy: analysisDate,
     uprawa,
-    enabled: autoAnaliza,
+    enabled: autoAnaliza && dataPoprawna,
   });
+
+  // Model ocenia najwyżej dzień sprzed ~6 dni (opóźnienie ERA5) – powiedz o tym wprost
+  const wynik = ocena.data?.wynik as
+    | { data_analizy?: string; dzien_ocenionych_danych?: string; braki_i_ograniczenia?: string[] }
+    | undefined;
+  const dzienOceniony =
+    wynik?.dzien_ocenionych_danych && wynik.dzien_ocenionych_danych !== wynik.data_analizy
+      ? wynik.dzien_ocenionych_danych
+      : null;
+  const braki = wynik?.braki_i_ograniczenia ?? [];
 
   const [raportTrwa, setRaportTrwa] = useState(false);
   const [raportBlad, setRaportBlad] = useState<string | null>(null);
@@ -55,6 +67,7 @@ function Index() {
   }
 
   function handleAnalyze() {
+    if (!dataPoprawna) return;
     if (!autoAnaliza) setAutoAnaliza(true);
     else void ocena.refetch();
   }
@@ -76,6 +89,30 @@ function Index() {
           canReport={ocena.isSuccess && !ocena.isFetching}
           isReporting={raportTrwa}
         />
+
+        {!dataPoprawna && (
+          <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Podaj pełną datę z zakresu {DATA_MIN} – {DATA_MAX}.
+          </div>
+        )}
+
+        {ocena.isSuccess && (dzienOceniony || braki.length > 0) && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {dzienOceniony && (
+              <p>
+                Wyniki dotyczą dnia <strong>{dzienOceniony}</strong>, a nie wybranego {wynik?.data_analizy}. To
+                ostatni dzień, dla którego są już dane pomiarowe.
+              </p>
+            )}
+            {braki.length > 0 && (
+              <ul className="mt-1 list-disc pl-5 text-xs">
+                {braki.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {raportBlad && (
           <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">

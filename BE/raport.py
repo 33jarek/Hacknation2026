@@ -28,6 +28,7 @@ SZARY = colors.HexColor("#6f8172")
 TEKST = colors.HexColor("#26352b")
 RAMKA = colors.HexColor("#e2e8dc")
 CZERWONY = colors.HexColor("#b91c1c")
+OLIWKOWY = colors.HexColor("#7f8f2a")   # = text-[#7f8f2a] w StatusCard.tsx
 
 _FONT_DIR = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
 pdfmetrics.registerFont(TTFont("DejaVu", os.path.join(_FONT_DIR, "DejaVuSans.ttf")))
@@ -181,7 +182,8 @@ def zbuduj_pdf(odp: dict, lokalizacja: dict, dzialka: Optional[dict], uprawa_lab
 
     # --- krok 1
     e.append(Paragraph("1. Ocena stanu wilgotności (model AI)", S["h2"]))
-    kolor_stanu = CZERWONY if ai["percentyl"] < 30 else ZIELONY
+    # ten sam kolor co w aplikacji (wyznaczony w backendzie z oceny i ryzyka dla uprawy)
+    kolor_stanu = {"red": CZERWONY, "olive": OLIWKOWY, "green": ZIELONY}.get(ai.get("kolor"), ZIELONY)
     e.append(Paragraph(f"<font color='{kolor_stanu.hexval()}'>{_esc(ai['status'])}</font>", S["stan"]))
     e.append(Spacer(1, 2))
     e.append(Paragraph(_esc(ai["summary"]), S["txt"]))

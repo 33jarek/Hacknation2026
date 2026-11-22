@@ -14,7 +14,7 @@ const fmtKrotko = (d: string) =>
   new Date(`${d}T12:00:00`).toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" });
 
 export const ForecastPlaceholder = ({ dane = [], isLoading, isError, isFallback = false, className = "" }: Props) => {
-  // ostatnie 7 dni kończące się na dniu analizy
+  // ostatnie 7 dni kończące się na ostatnim ocenionym dniu (dla dat bieżących: ~6 dni przed analizą, opóźnienie ERA5)
   const tydzien = dane.slice(-7).map((p) => ({
     ...p,
     etykieta: new Date(`${p.data}T12:00:00`).toLocaleDateString("pl-PL", {

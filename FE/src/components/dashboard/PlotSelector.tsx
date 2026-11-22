@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { MapaPolski } from "./MapaPolski";
+import { DATA_MAX, DATA_MIN } from "./zakresDat";
 import {
   lokalizacjaZAdresu,
   lokalizacjaZDzialki,
@@ -42,12 +43,6 @@ type PlotSelectorProps = {
   isReporting?: boolean;
 };
 
-// zakres dat: ostatnie 10 lat do dziś (czas lokalny)
-const isoLokalnie = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const DZIS = new Date();
-const DATA_MAX = isoLokalnie(DZIS);
-const DATA_MIN = isoLokalnie(new Date(DZIS.getFullYear() - 10, DZIS.getMonth(), DZIS.getDate()));
 
 const inputCls =
   "h-10 w-full min-w-0 rounded-md border border-kowr-border bg-kowr-white px-3 text-sm font-normal text-kowr-text outline-none focus:border-kowr-forest";

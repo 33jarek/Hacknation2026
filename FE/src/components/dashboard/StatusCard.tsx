@@ -28,7 +28,8 @@ export const StatusCard = ({ ocena }: Props) => {
   }
 
   const s = ocena.sugestia;
-  const kolorStanu = ocena.percentyl < 30 ? kolorTekstu.red : kolorTekstu.green;
+  // Kolor wyznacza backend (ocena + ryzyko dla uprawy) – ten sam trafia do raportu PDF
+  const kolorStanu = kolorTekstu[ocena.kolor] ?? kolorTekstu.green;
 
   return (
     <Card bodyClassName="grid gap-5">

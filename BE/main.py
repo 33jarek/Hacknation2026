@@ -148,7 +148,8 @@ def _ocena_dla_ui(wynik: dict, szereg_czasowy: list[dict], uprawa: Optional[str]
     return {
         "status": k1["stan"],
         "summary": k1["opis"],
-        "percentyl": round(float(wynik.get("percentyl") or 50), 1),
+        # `is None`, nie `or`: percentyl 0 (najsilniejsza susza) to poprawna wartość, nie brak danych
+        "percentyl": round(float(50 if wynik.get("percentyl") is None else wynik["percentyl"]), 1),
         "poziom": k2["ryzyko"],
         "kolor": kolor,
         "zakres": r["zakres"],

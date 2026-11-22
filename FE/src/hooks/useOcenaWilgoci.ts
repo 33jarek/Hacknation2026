@@ -146,6 +146,11 @@ async function pobierzOcene({
     try {
       const body = JSON.parse(errorText);
       if (typeof body?.detail === "string") message = body.detail;
+      // 422 z FastAPI: detail = [{ loc, msg, ... }]
+      else if (Array.isArray(body?.detail) && body.detail.length)
+        message = `Niepoprawne dane wejściowe: ${body.detail
+          .map((d: { loc?: unknown[]; msg?: string }) => `${(d.loc ?? []).slice(1).join(".")} – ${d.msg ?? ""}`)
+          .join("; ")}`;
     } catch {
       if (errorText) message += `: ${errorText.slice(0, 200)}`;
     }
