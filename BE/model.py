@@ -67,14 +67,34 @@ class LimitDzienny(Exception):
     """Open-Meteo odmówił – dzienny limit wyczerpany (spróbuj inna sieć / jutro)."""
 
 
+_CACHE_API = Path(__file__).resolve().parent / ".cache" / "openmeteo"
+
+
 def _get(url, params, proby=4):
-    """Zapytanie GET z obsługą limitów: przy limicie minutowym czeka i ponawia."""
+    """Zapytanie GET z obsługą limitów: przy limicie minutowym czeka i ponawia.
+    Odpowiedzi są cache'owane na dysku (dane archiwalne/wysokości się nie zmieniają)."""
+    import hashlib
+    klucz = hashlib.sha256(json.dumps([url, sorted(params.items())], default=str).encode()).hexdigest()
+    plik = _CACHE_API / f"{klucz}.json"
+    if plik.exists():
+        try:
+            return json.loads(plik.read_text())
+        except Exception:
+            plik.unlink(missing_ok=True)
+
     for proba in range(proby):
         r = requests.get(url, params=params, timeout=120)
         if r.status_code == 200:
-            return r.json()
+            js = r.json()
+            try:
+                _CACHE_API.mkdir(parents=True, exist_ok=True)
+                plik.write_text(json.dumps(js))
+            except Exception:
+                pass
+            return js
         tekst = r.text[:300]
-        if r.status_code == 429 and "Daily" in tekst:
+        if r.status_code == 429 and ("Daily" in tekst or "Hourly" in tekst):
+            # limit dzienny/godzinowy – czekanie nic nie da, zgłoś od razu
             raise LimitDzienny(tekst)
         if r.status_code in (429, 500, 502, 503, 504):
             czekaj = 60 if r.status_code == 429 else 10 * (proba + 1)
@@ -103,12 +123,16 @@ def pobierz_meteo(lat, lon, start, koniec):
     h["time"] = pd.to_datetime(h["time"])
     h = h.set_index("time")
     h.columns = ["sm_0_7", "sm_7_28", "sm_28_100"]
+    h_raw = h.tail(48).copy()                        # ostatnie 2 doby – do wykresu dnia
     h = h.resample("D").mean()                       # średnia dobowa
 
     df = d.join(h)
     # wilgotność strefy korzeni 0–100 cm = średnia ważona grubością warstw
     df["sm_0_100"] = 0.07 * df["sm_0_7"] + 0.21 * df["sm_7_28"] + 0.72 * df["sm_28_100"]
-    return df[["opad", "et0", "tmax", "sm_0_100"]]
+    wynik = df[["opad", "et0", "tmax", "sm_0_100"]].copy()
+    # godzinowa wilgotność 0–100 cm (do wykresu przebiegu dnia)
+    wynik.attrs["sm_godzinowe"] = 0.07 * h_raw["sm_0_7"] + 0.21 * h_raw["sm_7_28"] + 0.72 * h_raw["sm_28_100"]
+    return wynik
 
 
 GLEBOKOSCI = ["0-5cm", "5-15cm", "15-30cm", "30-60cm", "60-100cm"]
@@ -467,6 +491,7 @@ def ocen(lat, lon, data_analizy):
     c["era5_percentyl"] = percentyl_wilgotnosci(meteo["sm_0_100"]).reindex(c.index)
 
     dzis = c.iloc[-1]
+    szereg_godzinowy = _szereg_godzinowy(meteo, koniec, dzis)
     braki = []
     if koniec < D:
         braki.append(f"Dane meteo dostępne do {koniec.date()} (opóźnienie ERA5 ok. 5 dni).")
@@ -496,6 +521,12 @@ def ocen(lat, lon, data_analizy):
         "percentyl": round(float(dzis["ocena"]), 1),
         "przedzial_10_90": [round(float(dzis["ocena_q10"]), 1), round(float(dzis["ocena_q90"]), 1)],
         "klasa": klasa(dzis["ocena"]),
+        "pogoda": {
+            "temperatura_srednia_c": round(float(dzis["tmax_14"]), 1) if np.isfinite(dzis["tmax_14"]) else None,
+            "opady_30_dni_mm": round(float(dzis["opad_30"]), 1) if np.isfinite(dzis["opad_30"]) else None,
+            "wilgotnosc_gleby_pct": round(float(meteo["sm_0_100"].iloc[-1] * 100), 1)
+                if np.isfinite(meteo["sm_0_100"].iloc[-1]) else None,
+        },
         "kontrola_era5_percentyl": None if np.isnan(dzis["era5_percentyl"])
                                    else round(float(dzis["era5_percentyl"]), 1),
         "przyczyny": przyczyny,
@@ -504,7 +535,39 @@ def ocen(lat, lon, data_analizy):
         "zrodla": ["Open-Meteo / ERA5, ERA5-Land (CC BY 4.0)", "ISRIC SoilGrids v2.0 (CC BY 4.0)",
                    "Open-Meteo Elevation / Copernicus DEM"],
         "_szereg_dzienny": c[["ocena", "ocena_q10", "ocena_q90", "era5_percentyl"]],
+        "_szereg_godzinowy": szereg_godzinowy,
     }
+
+
+def _szereg_godzinowy(meteo, dzien, dzis, okno=7):
+    """Przebieg wybranego dnia godzina po godzinie: godzinowa wilgotność ERA5 0–100 cm
+    jako percentyl na tle tej samej pory roku (±7 dni, wartości dobowe z 10 lat)
+    + dzienna ocena modelu i przedział Q10–Q90 (model jest dobowy)."""
+    kolumny = ["era5_percentyl", "ocena", "ocena_q10", "ocena_q90"]
+    sm_h = meteo.attrs.get("sm_godzinowe")
+    if sm_h is None:
+        return pd.DataFrame(columns=kolumny)
+    dzien = pd.Timestamp(dzien).normalize()
+    godziny = sm_h[(sm_h.index >= dzien) & (sm_h.index < dzien + pd.Timedelta(days=1))]
+
+    sm_d = meteo["sm_0_100"].dropna()
+    doy = sm_d.index.dayofyear.values
+    odl = np.abs(doy - dzien.dayofyear)
+    odl = np.minimum(odl, 366 - odl)
+    pula = sm_d.values[odl <= okno]
+
+    df = pd.DataFrame(index=godziny.index)
+    if len(pula) >= 30:
+        v = godziny.values.astype(float)
+        perc = (pula[None, :] < v[:, None]).mean(axis=1) * 100
+        perc[np.isnan(v)] = np.nan
+        df["era5_percentyl"] = perc
+    else:
+        df["era5_percentyl"] = np.nan
+    df["ocena"] = float(dzis["ocena"])
+    df["ocena_q10"] = float(dzis["ocena_q10"])
+    df["ocena_q90"] = float(dzis["ocena_q90"])
+    return df
 
 
 # %% 9. URUCHOMIENIE TRENINGU (tylko gdy: python model.py)

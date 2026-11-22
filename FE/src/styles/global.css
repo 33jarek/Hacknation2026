@@ -18,3 +18,21 @@ body {
   min-width: 320px;
   background: var(--color-kowr-background);
 }
+
+/* Mapa wyboru działki – celownik zamiast "łapki" */
+.mapa-wybor.leaflet-container,
+.mapa-wybor.leaflet-container.leaflet-grab {
+  cursor: crosshair;
+}
+.mapa-wybor.leaflet-container.leaflet-dragging {
+  cursor: grabbing;
+}
+.mapa-wybor .leaflet-control-layers {
+  font-family: inherit;
+  font-size: 12px;
+}
+/* Tailwind preflight (img max-width/height:auto) psuje kafelki Leafleta */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}

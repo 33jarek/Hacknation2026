@@ -6,7 +6,7 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/charts/react";
 
 type Punkt = {
-  data: string;
+  etykieta: string;
   ocena: number | null;
   q10: number | null;
   q90: number | null;
@@ -30,28 +30,27 @@ export default function WykresWilgotnosci({ dane }: Props) {
     return defineChart({
       marks: [
         lineY(serie, {
-          x: "data",
+          x: "etykieta",
           y: "ocena",
           stroke: "#1f5b46",
+          strokeWidth: 2.5,
+        }),
+        lineY(serie, {
+          x: "etykieta",
+          y: "era5",
+          stroke: "#acc649",
           strokeWidth: 2.5,
           points: true,
         }),
         lineY(serie, {
-          x: "data",
-          y: "era5",
-          stroke: "#acc649",
-          strokeWidth: 2,
-          strokeDasharray: "6 4",
-        }),
-        lineY(serie, {
-          x: "data",
+          x: "etykieta",
           y: "q10",
           stroke: "#b7cfa3",
           strokeWidth: 1,
           strokeDasharray: "3 4",
         }),
         lineY(serie, {
-          x: "data",
+          x: "etykieta",
           y: "q90",
           stroke: "#b7cfa3",
           strokeWidth: 1,
@@ -62,13 +61,7 @@ export default function WykresWilgotnosci({ dane }: Props) {
         x: {
           scale: () => scalePoint<string>().padding(0.15),
           axis: {
-            ticks: {
-              format: (value: string) =>
-                value ? new Date(`${value}T12:00:00`).toLocaleDateString("pl-PL", {
-                  day: "2-digit",
-                  month: "short",
-                }) : "",
-            },
+            label: "Dzień",
           },
         },
         y: {
@@ -76,7 +69,7 @@ export default function WykresWilgotnosci({ dane }: Props) {
           domain: [0, 100],
           nice: false,
           grid: true,
-          axis: { label: "Wilgotność gleby", ticks: { format: (value: number) => `${value}%` } },
+          axis: { label: "Percentyl wilgotności (0 = najsucho, 100 = najmokro)", ticks: { format: (value: number) => `${value}` } },
         },
       },
       tooltip,
@@ -88,7 +81,7 @@ export default function WykresWilgotnosci({ dane }: Props) {
       <Chart
         definition={definicja}
         height={360}
-        ariaLabel="Wykres oceny wilgotności gleby"
+        ariaLabel="Wykres wilgotności gleby z ostatnich 7 dni"
       />
     </div>
   );

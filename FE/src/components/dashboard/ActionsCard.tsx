@@ -1,10 +1,13 @@
-const actions = [
-  { title: "Sprawdź wilgotność gleby", detail: "Monitoruj warstwę 10–20 cm przez 7 dni.", priority: "Pilne" },
-  { title: "Zachowaj resztki pożniwne", detail: "Zmniejszą parowanie i ograniczą erozję.", priority: "Polecane" },
-  { title: "Spowolnij odpływ wody", detail: "Rozważ małe rowki retencyjne po opadach.", priority: "Długoterminowe" },
-];
+import type { RekomendacjaAI } from "@Hooks/useOcenaWilgoci";
 
-export const ActionsCard = () => {
+type Props = { recommendations?: RekomendacjaAI[] };
+
+export const ActionsCard = ({ recommendations = [] }: Props) => {
+  const actions = recommendations.length ? recommendations : [{
+    title: "Ładowanie rekomendacji AI",
+    detail: "Backend przygotowuje zalecenia na podstawie wyniku modelu.",
+    priority: "Oczekuj",
+  }];
   return (
     <section className="rounded-2xl border border-kowr-border bg-kowr-white p-5">
       <div className="mb-3">

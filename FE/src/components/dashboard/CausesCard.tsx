@@ -1,16 +1,14 @@
-const causes = [
-  { title: "Bilans wodny", value: "Deficyt 42 mm", detail: "Straty przewyższają dostępne opady." },
-  { title: "Brak opadów", value: "18 mm / 30 dni", detail: "O 35% mniej niż średnia z tego okresu." },
-  { title: "Rodzaj gleby", value: "Piaszczysto-gliniasta", detail: "Średnia zdolność zatrzymywania wody." },
-];
+import type { PrzyczynaAI } from "@Hooks/useOcenaWilgoci";
 
-export const CausesCard = () => {
+type Props = { causes?: PrzyczynaAI[] };
+
+export const CausesCard = ({ causes = [] }: Props) => {
   return (
     <section className="rounded-2xl border border-kowr-border bg-kowr-white p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-kowr-gray">Przyczyny</p>
-      <h2 className="mt-1 text-lg font-bold text-kowr-text">Dlaczego jest niedobór</h2>
+      <h2 className="mt-1 text-lg font-bold text-kowr-text">Co wpływa na wilgotność</h2>
       <div className="mt-4 grid gap-2">
-        {causes.map((cause) => (
+        {(causes.length ? causes : [{ title: "Analiza AI", value: "Ładowanie", detail: "Backend przygotowuje przyczyny na podstawie wyników modelu." }]).map((cause) => (
           <div key={cause.title} className="rounded-xl border border-kowr-border bg-kowr-background p-3">
             <div className="flex items-start justify-between gap-3">
               <strong className="text-sm text-kowr-text">{cause.title}</strong>
